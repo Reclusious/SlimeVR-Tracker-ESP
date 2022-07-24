@@ -76,15 +76,15 @@ void BMI160::initialize(uint8_t addr)
 {
     devAddr = addr;
     /* Issue a soft-reset to bring the device into a clean state */
-    I2CdevMod::writeByte(devAddr, BMI160_RA_CMD, BMI160_CMD_SOFT_RESET);
+    setRegister(BMI160_RA_CMD, BMI160_CMD_SOFT_RESET);
     delay(1);
 
     /* Power up the accelerometer */
-    I2CdevMod::writeByte(devAddr, BMI160_RA_CMD, BMI160_CMD_ACC_MODE_NORMAL);
+    setRegister(devAddr, BMI160_RA_CMD, BMI160_CMD_ACC_MODE_NORMAL);
     delay(BMI160_ACCEL_POWERUP_DELAY_MS);
 
     /* Power up the gyroscope */
-    I2CdevMod::writeByte(devAddr, BMI160_RA_CMD, BMI160_CMD_GYR_MODE_NORMAL);
+    setRegister(devAddr, BMI160_RA_CMD, BMI160_CMD_GYR_MODE_NORMAL);
     delay(BMI160_GYRO_POWERUP_DELAY_MS);
 
     setGyroRate(BMI160_GYRO_RATE_800HZ);
@@ -104,6 +104,7 @@ void BMI160::initialize(uint8_t addr)
     setRegister(BMI160_RA_CMD, BMI160_EN_PULL_UP_REG_2);
     setRegister(BMI160_RA_CMD, BMI160_EN_PULL_UP_REG_3);
     setRegister(BMI160_7F, BMI160_EN_PULL_UP_REG_4);
+    setRegister(BMI160_RA_MAG_X_H, 2, 4, 2);
     setRegister(BMI160_7F, BMI160_EN_PULL_UP_REG_5);
 
     /* Set MAG I2C address */
@@ -113,7 +114,7 @@ void BMI160::initialize(uint8_t addr)
     setRegister(BMI160_MAG_IF_1, BMI160_MAG_MAN_EN);
     
     /* Enable MAG interface */
-    I2CdevMod::writeBits(devAddr, BMI160_IF_CONF, 2, 4, 2);
+    setRegister(BMI160_IF_CONF, 2, 4, 2);
 
     /* Configure BMM Sensor */
     /* Wake BMM150 up */
