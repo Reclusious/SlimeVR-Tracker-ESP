@@ -826,7 +826,7 @@ class BMI160 {
 
         void getMotion6(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz);
         void getMotion9(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz, int16_t* mx, int16_t* my, int16_t* mz);		//Added for BMM150 Support
-		void extractMotion9(uint8_t* buffer, int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz, int16_t* mx, int16_t* my, int16_t* mz, uint16_t* rh);		//Added for BMM150 Support
+		//void extractMotion9(uint8_t* buffer, int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz, int16_t* mx, int16_t* my, int16_t* mz, uint16_t* rh);		//Added for BMM150 Support
 		void getAcceleration(int16_t* x, int16_t* y, int16_t* z);
         int16_t getAccelerationX();
         int16_t getAccelerationY();
@@ -897,8 +897,8 @@ class BMI160 {
         //Time to exectute function is untested; while() is present
         void suspendIMU();
 
-    protected:
-        virtual int serial_buffer_transfer(uint8_t *buf, unsigned tx_cnt, unsigned rx_cnt);
+    //protected:
+      //  virtual int serial_buffer_transfer(uint8_t *buf, unsigned tx_cnt, unsigned rx_cnt);
 
     private:
         uint8_t buffer[14];
