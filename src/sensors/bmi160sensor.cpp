@@ -189,6 +189,7 @@ void BMI160Sensor::getScaledValues(float Gxyz[3], float Axyz[3], float Mxyz[3])
     #else
     int16_t mx, my, mz;
     imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+    Serial.printf("magnetometer %d, %d, %d", mx, my, mz);
     #endif
     // TODO: Sensitivity over temp compensation?
     // TODO: Cross-axis sensitivity compensation?
