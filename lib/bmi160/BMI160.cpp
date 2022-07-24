@@ -111,7 +111,7 @@ void BMI160::initialize(uint8_t addr)
     setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR); // 0 bit of address is reserved and needs to be shifted
     
     /* Enable MAG setup mode, set read out offset to MAX and burst length to 8 */
-    setRegister(BMI160_MAG_IF_1, BMI160_MAG_MAN_EN);
+    setRegister(BMI160_MAG_IF_1, BMI160_MAG_MAN_DIS);
     
     /* Enable MAG interface */
     I2CdevMod::writeBits(devAddr, BMI160_IF_CONF, 4, 2, 2);
@@ -124,7 +124,7 @@ void BMI160::initialize(uint8_t addr)
 
     /* Enable continuous measurement mode 200Hz */
     setRegister(BMI160_MAG_IF_4, BMM150_REGULAR_REPXY);
-    setRegister(BMI160_MAG_IF_3, BMM150_Z_REP_REG);
+    setRegister(BMI160_MAG_IF_3, BMM150_XY_REP_REG);
 
     /* Set BMM150 repetitions for Z-Axis */
     setRegister(BMI160_MAG_IF_4, BMM150_REGULAR_REPZ);              //Added for BMM150 Support
@@ -139,8 +139,18 @@ void BMI160::initialize(uint8_t addr)
     setRegister(BMI160_MAG_CONF, BMI160_MAG_CONF_200Hz);
 
     /* Enable MAG read mode */
-    setRegister(BMI160_MAG_IF_1, BMI160_MAG_DATA_MODE);
+    //setRegister(BMI160_MAG_IF_1, BMI160_MAG_DATA_MODE);
+    I2CdevMod::writeBits(devAddr, BMI160_MAG_IF_1, 7, 1, 0x0);
 
+   /* Wait for power-up to complete */
+    uint8_t temp=0;
+    do {
+        delay(1);
+        I2CdevMod::readBits(devAddr, BMI160_RA_PMU_STATUS,
+                                BMI160_MAG_PMU_STATUS_BIT,
+                                BMI160_MAG_PMU_STATUS_LEN, &temp);
+        Serial.printf("MagStatus: 0x%x2\n", temp);
+    }    while (0x1 != temp);
     /* Only PIN1 interrupts currently supported - map all interrupts to PIN1 */
     I2CdevMod::writeByte(devAddr, BMI160_RA_INT_MAP_0, 0xFF);
     I2CdevMod::writeByte(devAddr, BMI160_RA_INT_MAP_1, 0xF0);
