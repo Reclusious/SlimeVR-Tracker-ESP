@@ -78,6 +78,9 @@ void BMI160::initialize(uint8_t addr)
     /* Issue a soft-reset to bring the device into a clean state */
     setRegister(BMI160_RA_CMD, BMI160_CMD_SOFT_RESET);
     delay(1);
+    /* Issue a dummy-read to force the device into SPI comms mode */
+    //readBit(0x7F);
+    delay(1);
 
     /* Power up the accelerometer */
     setRegister(BMI160_RA_CMD, BMI160_CMD_ACC_MODE_NORMAL);
@@ -100,21 +103,22 @@ void BMI160::initialize(uint8_t addr)
     setAccelDLPFMode(BMI160_DLPF_MODE_OSR4);
     delay(1);
 
+    setRegister(BMI160_RA_FOC_CONF, BMI160_FOC_CONF_DEFAULT);        //Added for BMM150 Support
     setRegister(BMI160_RA_CMD, BMI160_EN_PULL_UP_REG_1);
     setRegister(BMI160_RA_CMD, BMI160_EN_PULL_UP_REG_2);
     setRegister(BMI160_RA_CMD, BMI160_EN_PULL_UP_REG_3);
     setRegister(BMI160_7F, BMI160_EN_PULL_UP_REG_4);
-    I2CdevMod::writeBits(devAddr, BMI160_RA_MAG_X_H, 4, 2, 2);
+    I2CdevMod::writeBits(devAddr, BMI160_RA_MAG_X_H, 2, 4, 2);
     setRegister(BMI160_7F, BMI160_EN_PULL_UP_REG_5);
 
     /* Set MAG I2C address */
     setRegister(BMI160_MAG_IF_0, BMM150_BASED_I2C_ADDR); // 0 bit of address is reserved and needs to be shifted
     
     /* Enable MAG setup mode, set read out offset to MAX and burst length to 8 */
-    setRegister(BMI160_MAG_IF_1, BMI160_MAG_MAN_DIS);
+    setRegister(BMI160_MAG_IF_1, BMI160_MAG_MAN_EN);
     
     /* Enable MAG interface */
-    I2CdevMod::writeBits(devAddr, BMI160_IF_CONF, 4, 2, 2);
+    I2CdevMod::writeBits(devAddr, BMI160_IF_CONF, 2, 4, 2);
 
     /* Configure BMM Sensor */
     /* Wake BMM150 up */
@@ -136,7 +140,7 @@ void BMI160::initialize(uint8_t addr)
     setRegister(BMI160_MAG_IF_3, BMM150_OPMODE_REG);                 //Added for BMM150 Support
     setRegister(BMI160_MAG_IF_2, BMM150_DATA_REG);
     /* Configure MAG interface data rate (200Hz) */
-    setRegister(BMI160_MAG_CONF, BMI160_MAG_CONF_200Hz);
+    setRegister(BMI160_AUX_ODR_ADDR, BMI160_MAG_CONF_200Hz);
 
     /* Enable MAG read mode */
     //setRegister(BMI160_MAG_IF_1, BMI160_MAG_DATA_MODE);
@@ -144,13 +148,13 @@ void BMI160::initialize(uint8_t addr)
 
    /* Wait for power-up to complete */
     uint8_t temp=0;
-    do {
+   // do {
         delay(1);
         I2CdevMod::readBits(devAddr, BMI160_RA_PMU_STATUS,
                                 BMI160_MAG_PMU_STATUS_BIT,
                                 BMI160_MAG_PMU_STATUS_LEN, &temp);
-        Serial.printf("MagStatus: 0x%x2\n", temp);
-    }    while (0x1 != temp);
+       //Serial.printf("MagStatus: 0x%x2\n", temp);
+    //}    while (0x1 != temp);
     /* Only PIN1 interrupts currently supported - map all interrupts to PIN1 */
     I2CdevMod::writeByte(devAddr, BMI160_RA_INT_MAP_0, 0xFF);
     I2CdevMod::writeByte(devAddr, BMI160_RA_INT_MAP_1, 0xF0);
@@ -1514,6 +1518,30 @@ void BMI160::setGyroFIFOEnabled(bool enabled) {
                    1, enabled ? 0x1 : 0);
 }
 
+//Added for BMM150 Support
+/** Get magnetometer FIFO enabled value.
+ * When set to 1, this bit enables magnetometer data samples to be
+ * written into the FIFO buffer.
+ * @return Current magnetometer FIFO enabled value
+ * @see BMI160_RA_FIFO_CONFIG_1
+ */
+bool BMI160::getMagFIFOEnabled() {
+    I2CdevMod::readBits(devAddr, BMI160_RA_FIFO_CONFIG_1,
+                            BMI160_FIFO_MAG_EN_BIT,
+                            1, buffer);
+    return !!buffer[0];
+}
+/** Set magnetometer FIFO enabled value.
+ * @param enabled New magnetometer FIFO enabled value
+ * @see getMagFIFOEnabled()
+ * @see BMI160_RA_FIFO_CONFIG_1
+ */
+void BMI160::setMagFIFOEnabled(bool enabled) {
+    I2CdevMod::writeBits(devAddr, BMI160_RA_FIFO_CONFIG_1,
+                   BMI160_FIFO_MAG_EN_BIT,
+                   1, enabled ? 0x1 : 0);
+}
+
 /** Get current FIFO buffer size.
  * This value indicates the number of bytes stored in the FIFO buffer. This
  * number is in turn the number of bytes that can be read from the FIFO buffer.
@@ -2190,8 +2218,9 @@ void BMI160::getMotion6(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int1
     *az = (((int16_t)buffer[11]) << 8) | buffer[10];
 }
 
-void BMI160::getMotion9(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz, int16_t* mx, int16_t* my, int16_t* mz) {
+void BMI160::getMotion9(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz, int16_t* mx, int16_t* my, int16_t* mz, int16_t* rh) {
     I2CdevMod::readBytes(devAddr, BMI160_RA_GYRO_X_L, 12, buffer);
+    *rh = ((((int16_t)buffer[7])<<8) | (buffer[6] & BMM150_DATA_RHALL_MSK))/4; //MSK = 0xFC
     *gx = (((int16_t)buffer[1])  << 8) | buffer[0];
     *gy = (((int16_t)buffer[3])  << 8) | buffer[2];
     *gz = (((int16_t)buffer[5])  << 8) | buffer[4];
