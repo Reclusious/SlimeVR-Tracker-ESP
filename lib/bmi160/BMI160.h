@@ -49,8 +49,8 @@ THE SOFTWARE.
 #define BMM150_OK					0x00 //Added for BMM150 Support
 
 #define BMM150_EN_SLEEP_MODE        0x01  //Added for BMM150 Support
-//#define BMM150_XY_REPETITIONS       0x04  //Added for BMM150 Support
-//#define BMM150_Z_REPETITIONS        0x0E  //Added for BMM150 Support
+#define BMM150_XY_REPETITIONS       0x04  //Added for BMM150 Support
+#define BMM150_Z_REPETITIONS        0x0E  //Added for BMM150 Support
 
 /**\name POWER MODE DEFINTIONS      */
 #define BMM150_NORMAL_MODE		UINT8_C(0x00)
@@ -149,7 +149,7 @@ THE SOFTWARE.
 #define BMI160_RA_MAG_R_L           0x0A  //Added for BMM150 Support
 #define BMI160_RA_MAG_R_H           0x0B  //Added for BMM150 Support
 
-#define BMI160_RA_MAG_CONF          0X44  //Added for BMM150 Support
+//#define BMI160_RA_MAG_CONF          0X44  //Added for BMM150 Support
 #define BMI160_AUX_ODR_ADDR         UINT8_C(0x44) //Added for BMM150 Support
 
 /**************************/
@@ -825,7 +825,7 @@ class BMI160 {
         bool getIntDataReadyStatus();
 
         void getMotion6(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz);
-        void getMotion9(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz, int16_t* mx, int16_t* my, int16_t* mz);		//Added for BMM150 Support
+        void getMotion9(int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz, int16_t* mx, int16_t* my, int16_t* mz, int16_t* rh);		//Added for BMM150 Support
 		//void extractMotion9(uint8_t* buffer, int16_t* ax, int16_t* ay, int16_t* az, int16_t* gx, int16_t* gy, int16_t* gz, int16_t* mx, int16_t* my, int16_t* mz, uint16_t* rh);		//Added for BMM150 Support
 		void getAcceleration(int16_t* x, int16_t* y, int16_t* z);
         int16_t getAccelerationX();
