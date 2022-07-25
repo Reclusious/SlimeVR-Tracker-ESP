@@ -23,10 +23,6 @@
 
 #include "bmi160sensor.h"
 #include "network/network.h"
-#include "globals.h"
-#include "helper_3dmath.h"
-#include "calibration.h"
-#include "magneto1.4.h"
 #include "GlobalVars.h"
 
 // Typical sensitivity at 25C
@@ -73,7 +69,6 @@ void BMI160Sensor::motionSetup() {
     int16_t ax, ay, az;
     imu.getAcceleration(&ax, &ay, &az);
     float g_az = (float)az / 8192; // For 4G sensitivity
-    Serial.printf("%f\n", g_az);
     if(g_az < -0.75f) {
         ledManager.on();
 
@@ -81,7 +76,6 @@ void BMI160Sensor::motionSetup() {
         delay(5000);
         imu.getAcceleration(&ax, &ay, &az);
         g_az = (float)az / 8192;
-        Serial.printf("%f\n", g_az);
         if(g_az > 0.75f)
         {
             m_Logger.debug("Starting calibration...");
@@ -132,7 +126,6 @@ void BMI160Sensor::motionLoop() {
     float Gxyz[3] = {0};
     float Axyz[3] = {0};
     float Mxyz[3] = {0};
-
     getScaledValues(Gxyz, Axyz, Mxyz);
     #if USE_6_AXIS
     mahonyQuaternionUpdate(q, Axyz[0], Axyz[1], Axyz[2], Gxyz[0], Gxyz[1], Gxyz[2], deltat * 1.0e-6f);
@@ -185,12 +178,11 @@ void BMI160Sensor::getScaledValues(float Gxyz[3], float Axyz[3], float Mxyz[3])
     // TODO: Read from FIFO?
     #if USE_6_AXIS
     imu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-    imu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
     #else
     int16_t mx, my, mz;
     imu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
-    Serial.printf("magnetometer %d, %d, %d", mx, my, mz);
     #endif
+
     // TODO: Sensitivity over temp compensation?
     // TODO: Cross-axis sensitivity compensation?
     Gxyz[0] = ((float)gx - (m_Calibration.G_off[0] + (tempDiff * LSB_COMP_PER_TEMP_X_MAP[quant]))) * GSCALE;
@@ -269,17 +261,17 @@ void BMI160Sensor::startCalibration(int calibrationType) {
 #endif
 
     // Blink calibrating led before user should rotate the sensor
-    m_Logger.info("After 3 seconds, Gently rotate the device while it's gathering accelerometer data");
+    m_Logger.info("After 3 seconds, Gently rotate the device while it's gathering data");
     ledManager.on();
     delay(1500);
     ledManager.off();
     delay(1500);
-    m_Logger.debug("Gathering accelerometer data...");
+    m_Logger.debug("Gathering data...");
 
-    uint16_t accelCalibrationSamples = 300;
+    uint16_t secondaryCalibrationSamples = 300;
     #if USE_6_AXIS
-    float *calibrationDataAcc = (float*)malloc(accelCalibrationSamples * 3 * sizeof(float));
-    for (int i = 0; i < accelCalibrationSamples; i++)
+    float *calibrationDataAcc = (float*)malloc(secondaryCalibrationSamples * 3 * sizeof(float));
+    for (int i = 0; i < secondaryCalibrationSamples; i++)
     {
         ledManager.on();
 
@@ -296,7 +288,7 @@ void BMI160Sensor::startCalibration(int calibrationType) {
     m_Logger.debug("Calculating calibration data...");
 
     float A_BAinv[4][3];
-    CalculateCalibration(calibrationDataAcc, accelCalibrationSamples, A_BAinv);
+    CalculateCalibration(calibrationDataAcc, secondaryCalibrationSamples, A_BAinv);
     free(calibrationDataAcc);
     m_Logger.debug("Finished Calculate Calibration data");
     m_Logger.debug("Accelerometer calibration matrix:");
@@ -310,32 +302,40 @@ void BMI160Sensor::startCalibration(int calibrationType) {
         m_Logger.debug("  %f, %f, %f, %f", A_BAinv[0][i], A_BAinv[1][i], A_BAinv[2][i], A_BAinv[3][i]);
     }
     m_Logger.debug("}");
-#else
-    float *calibrationDataAcc = (float*)malloc(accelCalibrationSamples * 3 * sizeof(float));
-    float *calibrationDataMag = (float*)malloc(accelCalibrationSamples * 3 * sizeof(float));
-    for (int i = 0; i < accelCalibrationSamples; i++)
+    #else
+    float *calibrationDataAcc = (float*)malloc(secondaryCalibrationSamples * 3 * sizeof(float));
+    float *calibrationDataMag = (float*)malloc(secondaryCalibrationSamples * 3 * sizeof(float));
+    for (int i = 0; i < secondaryCalibrationSamples; i++)
     {
         ledManager.on();
+
         int16_t ax, ay, az;
         imu.getAcceleration(&ax, &ay, &az);
         calibrationDataAcc[i * 3 + 0] = ax;
         calibrationDataAcc[i * 3 + 1] = ay;
         calibrationDataAcc[i * 3 + 2] = az;
+
         int16_t mx, my, mz;
         imu.getMagnetometer(&mx, &my, &mz);
+
+        /* Testing Line for checking mag values without full cal */
+        //Serial.printf("mag: %d, %d, %d\n", mx, my, mz);
+        
         calibrationDataMag[i * 3 + 0] = mx;
         calibrationDataMag[i * 3 + 1] = my;
         calibrationDataMag[i * 3 + 2] = mz;
+
         ledManager.off();
         delay(100);
     }
     ledManager.off();
     m_Logger.debug("Calculating calibration data...");
+
     float A_BAinv[4][3];
     float M_BAinv[4][3];
-    CalculateCalibration(calibrationDataAcc, accelCalibrationSamples, A_BAinv);
+    CalculateCalibration(calibrationDataAcc, secondaryCalibrationSamples, A_BAinv);
     free(calibrationDataAcc);
-    CalculateCalibration(calibrationDataMag, accelCalibrationSamples, M_BAinv);
+    CalculateCalibration(calibrationDataMag, secondaryCalibrationSamples, M_BAinv);
     free(calibrationDataMag);
     m_Logger.debug("Finished Calculate Calibration data");
     m_Logger.debug("Accelerometer calibration matrix:");
@@ -360,6 +360,7 @@ void BMI160Sensor::startCalibration(int calibrationType) {
     }
     m_Logger.debug("}");
     #endif
+
     m_Logger.debug("Saving the calibration data");
 
     SlimeVR::Configuration::CalibrationConfig calibration;
