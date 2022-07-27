@@ -206,9 +206,9 @@ void BMI160Sensor::getScaledValues(float Gxyz[3], float Axyz[3], float Mxyz[3])
     #endif
 
     #if !USE_6_AXIS
-    Mxyz[0] = (float)mx;
-    Mxyz[1] = (float)my;
-    Mxyz[2] = (float)mz;
+    Mxyz[0] = -(float)mx; //UNSURE
+    Mxyz[1] = -(float)my; //was negative during good test
+    Mxyz[2] = (float)mz; //UNSURE
     //apply offsets and scale factors from Magneto
     #if useFullCalibrationMatrix == true
         for (uint8_t i = 0; i < 3; i++)
@@ -321,10 +321,10 @@ void BMI160Sensor::startCalibration(int calibrationType) {
         /* Testing Line for checking mag values without full cal */
         //Serial.printf("mag: %d, %d, %d\n", mx, my, mz);
         
-        calibrationDataMag[i * 3 + 0] = mx;
-        calibrationDataMag[i * 3 + 1] = my;
-        calibrationDataMag[i * 3 + 2] = mz;
-
+        //012 doesnt need adjusted. Just Z or other math.
+        calibrationDataMag[i * 3 + 0] = -mx; //UNSURE
+        calibrationDataMag[i * 3 + 1] = -my; //KEEP NEGATIVE
+        calibrationDataMag[i * 3 + 2] = mz; //Leave alone for testing
         ledManager.off();
         delay(100);
     }
